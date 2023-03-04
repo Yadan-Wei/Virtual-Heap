@@ -55,14 +55,15 @@ virtual_t find_first_available_virtual_block() {
 }
 
 void map_physical_virtual(virtual_block) {
+  physical_t physical_block;
   if is_physical_full() {
-    swap_out(virtual_block)
+    physical_block = swap_out()
   } else {
-    physical_t physical_block = find_first_avaiable_physical_block();
-    virtual_block->physical = physical_block;
+    physical_block = find_first_available_physical_block();
     physical_block->used = 1;
     physical_available -= 1;
   }
+  virtual_block->physical = physical_block;
 }
 
 physcial_t find_first_avaiable_physical_block() {
@@ -74,7 +75,7 @@ physcial_t find_first_avaiable_physical_block() {
   }
 }
 
-void swap_out(virtual_block) {
+physical_t swap_out() {
   virtual_t swap_out_block = find_first_used_not_swapped_virtual_block();
   physical_t swap_out_physical_block = swap_out_block->physical;
   
@@ -84,10 +85,10 @@ void swap_out(virtual_block) {
     fwrite ...
   }
   fclose ...
-  virtual_block->physical = swap_out_physical_block
   swap_out_block-> file_path = file
   swap_out_block->physcial = NULL
   swap_out_block->swapped = 1
+  return swap_out_physical_block
 }
 
 virtual_t find_first_used_not_swapped_virtual_block() {
@@ -106,9 +107,15 @@ void * pm_check(virtual_t * virtual_block) {
 }
 
 void swap_in(virtual_block) {
-  virtual_t swap_out_virtual_block = find_first_used_not_swapped_virtual_block();
+  virtual_block-> physical = swap_out();
   fopen vritual_block->filepath
+  fread...
+  write to physical_block-> physical_addr
+  fclose
   
+  virtual_block->swapped = 0
+  virtual_block->file_path = NULL
+    
 }
 
 
