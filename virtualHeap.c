@@ -2,13 +2,13 @@
 #include <stdlib.h>
 #include <stddef.h>
 
-#define PHYSICAL_SIZE 10 * 1024 * 1024
-#define PAGE_SIZE 4 * 1024
-#define FILEPATH "./memory.dat"
+#define PHYSICAL_SIZE (20 * 1024)
+#define PAGE_SIZE (4 * 1024)
+#define FILEPATH "memory.dat"
 
-const int virtual_size = 2 * PHYSICAL_SIZE;
-const int virtual_block_num = virtual_size / PAGE_SIZE;
-const int physical_block_num = PHYSICAL_SIZE / PAGE_SIZE;
+#define VIRTUAL_SIZE (2 * PHYSICAL_SIZE)
+#define VIRTUAL_BLOCK_NUM (VIRTUAL_SIZE / PAGE_SIZE)
+#define PHYSICAL_BLOCK_NUM (PHYSICAL_SIZE / PAGE_SIZE)
 
 typedef struct physical_t
 {
@@ -21,31 +21,37 @@ typedef struct virtual_t
 {
     int swapped;
     int used;
-    int offset;
+    long int offset;
     physical_t *physical;
     size_t size;
 } virtual_t;
 
 static unsigned char pm_heap[PHYSICAL_SIZE];
-static virtual_t pm_virtual[virtual_block_num];
-static physical_t pm_physical[physical_block_num];
+static virtual_t pm_virtual[VIRTUAL_BLOCK_NUM];
+static physical_t pm_physical[PHYSICAL_BLOCK_NUM];
 
-int physical_available = physical_block_num;
-int virtual_available = virtual_block_num;
-int file_current_offset = 0;
+int physical_available = PHYSICAL_BLOCK_NUM;
+int virtual_available = VIRTUAL_BLOCK_NUM;
 
 // init all physical blocks point to physical address
 
 void pm_init()
 {
 
-    for (int i = 0; i < physical_block_num; i++)
+    for (int i = 0; i < PHYSICAL_BLOCK_NUM; i++)
     {
-        physical_t *physical_block;
-        physical_block->size = PAGE_SIZE;
-        physical_block->used = 0;
-        physical_block->physical_addr = (void *)pm_heap[i * PAGE_SIZE];
-        pm_physical[i] = physical_block;
+        pm_physical[i].size = PAGE_SIZE;
+        pm_physical[i].used = 0;
+        pm_physical[i].physical_addr = (void *)(pm_heap + i * PAGE_SIZE);
+    }
+
+    for (int i = 0; i < VIRTUAL_BLOCK_NUM; i++)
+    {
+        pm_virtual[i].size = 0;
+        pm_virtual[i].used = 0;
+        pm_virtual[i].physical = NULL;
+        pm_virtual[i].swapped = 0;
+        pm_virtual[i].offset = 0;
     }
 }
 
@@ -80,35 +86,63 @@ int is_virtual_full()
 }
 
 /*
-Malloc funtcion return a pointer to virtual block
+Find first unused physical block.
 */
-virtual_t *pm_malloc(size_t size)
+physical_t *find_first_available_physical_block()
 {
-    if (is_virtual_full())
+    physical_t *res = NULL;
+    for (int i = 0; i < PHYSICAL_BLOCK_NUM; i++)
     {
-        return 0;
+        if (!pm_physical[i].used)
+        {
+            res = &(pm_physical[i]);
+            break;
+        }
     }
-    virtual_t *virtual_block = find_first_available_virtual_block();
-    virtual_block->used = 1;
-    virtual_block->size = size;
-    virtual_available -= 1;
-    return virtual_block;
+    return res;
 }
 
 /*
-Find the first available virtual block to assign, and map it with physical block accordingly.
+Find first used but not swapped virtual block.
 */
-virtual_t *find_first_available_virtual_block()
+virtual_t *find_first_used_not_swapped_virtual_block()
 {
-    for (int i = 0; i < virtual_block_num; i++)
+    virtual_t *res = NULL;
+    for (int i = 0; i < VIRTUAL_BLOCK_NUM; i++)
     {
-        virtual_t *virtual_block = pm_virtual[i];
-        if (!virtual_block->used)
+
+        if (pm_virtual[i].used && !pm_virtual[i].swapped)
         {
-            map_physical_virtual(virtual_block);
-            return virtual_block;
+            res = &(pm_virtual[i]);
+            break;
         }
     }
+    return res;
+}
+
+/*
+Swap out the first used but not swapped virtual block's physical block and return it.
+*/
+physical_t *swap_out()
+{
+    virtual_t *swap_out_block = find_first_used_not_swapped_virtual_block();
+    physical_t *swap_out_physical_block = swap_out_block->physical;
+
+    FILE *fp = fopen(FILEPATH, "wb");
+
+    if (fp == NULL)
+    {
+        printf("Failed to open file.\n");
+        exit(1);
+    }
+    char *buffer = (char *)swap_out_physical_block->physical_addr;
+    long int offset = ftell(fp);
+    fwrite(buffer, swap_out_block->size, 1, fp);
+    fclose(fp);
+    swap_out_block->offset = offset;
+    swap_out_block->physical = 0;
+    swap_out_block->swapped = 1;
+    return swap_out_physical_block;
 }
 
 /*
@@ -132,65 +166,37 @@ void map_physical_virtual(virtual_t *virtual_block)
 }
 
 /*
-Find first unused physical block.
+Find the first available virtual block to assign, and map it with physical block accordingly.
 */
-physical_t *find_first_available_physical_block()
+virtual_t *find_first_available_virtual_block()
 {
-
-    for (int i = 0; i < physical_block_num; i++)
+    virtual_t *res = NULL;
+    for (int i = 0; i < VIRTUAL_BLOCK_NUM; i++)
     {
-        physical_t *physical_block = pm_physical[i];
-        if (!physical_block->used)
+        if (!pm_virtual[i].used)
         {
-            return physical_block;
+            map_physical_virtual(&(pm_virtual[i]));
+            res = &(pm_virtual[i]);
+            break;
         }
     }
+    return res;
 }
 
 /*
-Swap out the first used but not swapped virtual block's physical block and return it.
+Malloc funtcion return a pointer to virtual block
 */
-physical_t *swap_out()
+virtual_t *pm_malloc(size_t size)
 {
-    virtual_t *swap_out_block = find_first_used_not_swapped_virtual_block();
-    physical_t *swap_out_physical_block = swap_out_block->physical;
-
-    FILE *fp = fopen(FILEPATH, "wb");
-    char *buffer = swap_out_physical_block->physical_addr;
-    fwrite(buffer, swap_out_block->size, file_current_offset, fp);
-    fclose(fp);
-    swap_out_block->offset = file_current_offset;
-    file_current_offset += 1;
-    swap_out_block->physical = 0;
-    swap_out_block->swapped = 1;
-    return swap_out_physical_block;
-}
-
-/*
-Find first used but not swapped virtual block.
-*/
-virtual_t *find_first_used_not_swapped_virtual_block()
-{
-    for (int i = 0; i < virtual_block_num; i++)
+    if (is_virtual_full())
     {
-        virtual_t *virtual_block = pm_virtual[i];
-        if (virtual_block->used && !virtual_block->swapped)
-        {
-            return virtual_block;
-        }
+        return NULL;
     }
-}
-
-/*
-Check if a virtual block is swapped or not, if swapped, swap in else do nothing, return the physcial address that can be used.
-*/
-void *pm_check(virtual_t *virtual_block)
-{
-    if (virtual_block->swapped)
-    {
-        swap_in(virtual_block);
-    }
-    return virtual_block->physical->physical_addr;
+    virtual_t *virtual_block = find_first_available_virtual_block();
+    virtual_block->used = 1;
+    virtual_block->size = size;
+    virtual_available -= 1;
+    return virtual_block;
 }
 
 /*
@@ -198,12 +204,31 @@ Swap in function, swap in a virtual block memory from file.
 */
 void swap_in(virtual_t *virtual_block)
 {
-    virtual_block->physical = swap_out();
-    FILE *fp = fopen(FILEPATH, "wb");
-    fread(virtual_block->physical->physical_addr, virtual_block->size, virtual_block->offset, fp);
+    if (!is_physical_full())
+    {
+        virtual_block->physical = find_first_available_physical_block();
+    }
+    else
+    {
+        virtual_block->physical = swap_out();
+    }
+    FILE *fp = fopen(FILEPATH, "rb");
+    fseek(fp, virtual_block->offset, SEEK_SET);
+    fread(virtual_block->physical->physical_addr, virtual_block->size, 1, fp);
     fclose(fp);
     virtual_block->swapped = 0;
     virtual_block->offset = 0;
+}
+
+/*
+Check if a virtual block is swapped or not, if swapped, swap in else do nothing, return the physcial address that can be used.
+*/
+void pm_check(virtual_t *virtual_block)
+{
+    if (virtual_block->swapped)
+    {
+        swap_in(virtual_block);
+    }
 }
 
 /*
@@ -225,4 +250,33 @@ void pm_free(virtual_t *virtual_block)
     }
     virtual_block->used = 0;
     virtual_available += 1;
+}
+
+int main()
+{
+
+    pm_init();
+    virtual_t *v1 = pm_malloc(4 * 1024 * sizeof(char));
+    printf("v1 allocated physcial address is %p\n", v1->physical->physical_addr);
+    printf("v1 used: %d, v1 swapped: %d\n", v1->used, v1->swapped);
+    virtual_t *v2 = pm_malloc(4 * 1024 * sizeof(char));
+    printf("v2 allocated physcial address is %p\n", v2->physical->physical_addr);
+    printf("v2 used: %d, v2 swapped: %d\n", v2->used, v2->swapped);
+    virtual_t *v3 = pm_malloc(4 * 1024 * sizeof(char));
+    printf("v3 allocated physcial address is %p\n", v3->physical->physical_addr);
+    printf("v3 used: %d, v3 swapped: %d\n", v3->used, v3->swapped);
+    virtual_t *v4 = pm_malloc(4 * 1024 * sizeof(char));
+    printf("v4 allocated physcial address is %p\n", v4->physical->physical_addr);
+    printf("v4 used: %d, v4 swapped: %d\n", v4->used, v4->swapped);
+    virtual_t *v5 = pm_malloc(4 * 1024 * sizeof(char));
+    printf("v5 allocated physcial address is %p\n", v5->physical->physical_addr);
+    printf("v5 used: %d, v5 swapped: %d\n", v5->used, v5->swapped);
+    virtual_t *v6 = pm_malloc(4 * 1024 * sizeof(char));
+    printf("v6 allocated physcial address is %p\n", v6->physical->physical_addr);
+    printf("v6 used: %d, v6 swapped: %d\n", v6->used, v6->swapped);
+
+    printf("*******After allocate v6 check v1 is swapped******\n");
+    printf("v1 used: %d, v1 swapped: %d\n", v1->used, v1->swapped);
+
+    return 0;
 }
