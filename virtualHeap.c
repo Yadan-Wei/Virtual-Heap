@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stddef.h>
+#include <string.h>
 
 #define PHYSICAL_SIZE (20 * 1024)
 #define PAGE_SIZE (4 * 1024)
@@ -128,19 +129,23 @@ physical_t *swap_out()
     virtual_t *swap_out_block = find_first_used_not_swapped_virtual_block();
     physical_t *swap_out_physical_block = swap_out_block->physical;
 
-    FILE *fp = fopen(FILEPATH, "wb");
+    FILE *fp = fopen(FILEPATH, "ab");
 
     if (fp == NULL)
     {
         printf("Failed to open file.\n");
         exit(1);
     }
-    char *buffer = (char *)swap_out_physical_block->physical_addr;
+    char *buffer = (char *)(swap_out_physical_block->physical_addr);
+    // printf("The buffer value is %s\n", buffer);
+    fseek(fp, 0, SEEK_END);
     long int offset = ftell(fp);
-    fwrite(buffer, swap_out_block->size, 1, fp);
+    fwrite(buffer, 1, swap_out_block->size, fp);
+
+    // printf("after writing offset is %ld\n", ftell(fp));
     fclose(fp);
     swap_out_block->offset = offset;
-    swap_out_block->physical = 0;
+    swap_out_block->physical = NULL;
     swap_out_block->swapped = 1;
     return swap_out_physical_block;
 }
@@ -212,9 +217,15 @@ void swap_in(virtual_t *virtual_block)
     {
         virtual_block->physical = swap_out();
     }
-    FILE *fp = fopen(FILEPATH, "rb");
+    FILE *fp = fopen(FILEPATH, "rb+");
+
+    if (fp == NULL)
+    {
+        printf("Failed to open file.\n");
+        exit(1);
+    }
     fseek(fp, virtual_block->offset, SEEK_SET);
-    fread(virtual_block->physical->physical_addr, virtual_block->size, 1, fp);
+    fread((char *)(virtual_block->physical->physical_addr), 1, virtual_block->size, fp);
     fclose(fp);
     virtual_block->swapped = 0;
     virtual_block->offset = 0;
@@ -245,7 +256,7 @@ void pm_free(virtual_t *virtual_block)
     else
     {
         virtual_block->physical->used = 0;
-        virtual_block->physical = 0;
+        virtual_block->physical = NULL;
         physical_available += 1;
     }
     virtual_block->used = 0;
@@ -254,14 +265,25 @@ void pm_free(virtual_t *virtual_block)
 
 int main()
 {
-
     pm_init();
+    printf("******Test pm_malloc can assign more memory than actual physcial volume.*********\n");
     virtual_t *v1 = pm_malloc(4 * 1024 * sizeof(char));
     printf("v1 allocated physcial address is %p\n", v1->physical->physical_addr);
     printf("v1 used: %d, v1 swapped: %d\n", v1->used, v1->swapped);
+    pm_check(v1);
+    char *a = (char *)(v1->physical->physical_addr);
+    strcpy(a, "Hello World!");
+    printf("the value assigned to v1 is %s\n", (char *)(v1->physical->physical_addr));
+
     virtual_t *v2 = pm_malloc(4 * 1024 * sizeof(char));
     printf("v2 allocated physcial address is %p\n", v2->physical->physical_addr);
     printf("v2 used: %d, v2 swapped: %d\n", v2->used, v2->swapped);
+
+    pm_check(v2);
+    char *b = (char *)(v2->physical->physical_addr);
+    strcpy(b, "Hello CS5600!");
+    printf("the value assigned to v2 is %s\n", (char *)(v2->physical->physical_addr));
+
     virtual_t *v3 = pm_malloc(4 * 1024 * sizeof(char));
     printf("v3 allocated physcial address is %p\n", v3->physical->physical_addr);
     printf("v3 used: %d, v3 swapped: %d\n", v3->used, v3->swapped);
@@ -274,9 +296,37 @@ int main()
     virtual_t *v6 = pm_malloc(4 * 1024 * sizeof(char));
     printf("v6 allocated physcial address is %p\n", v6->physical->physical_addr);
     printf("v6 used: %d, v6 swapped: %d\n", v6->used, v6->swapped);
+    virtual_t *v7 = pm_malloc(4 * 1024 * sizeof(char));
+    printf("v7 allocated physcial address is %p\n", v7->physical->physical_addr);
+    printf("v7 used: %d, v7 swapped: %d\n", v7->used, v7->swapped);
 
-    printf("*******After allocate v6 check v1 is swapped******\n");
+    printf("*******After allocate v6, v7 check v1, v2 is swapped******\n");
+    printf("v1 used: %d, v1 swapped: %d, v1 offset: %ld\n", v1->used, v1->swapped, v1->offset);
+    printf("v2 used: %d, v2 swapped: %d, v2 offset: %ld\n", v2->used, v2->swapped, v2->offset);
+
+    printf("******Test reuse v1, v2 and swap in v1, v2 from file.*****\n");
+    pm_check(v1);
     printf("v1 used: %d, v1 swapped: %d\n", v1->used, v1->swapped);
+    printf("the value assigned to v1 is %s\n", (char *)(v1->physical->physical_addr));
+
+    pm_check(v2);
+    printf("v2 used: %d, v2 swapped: %d\n", v2->used, v2->swapped);
+    printf("the value assigned to v2 is %s\n", (char *)(v2->physical->physical_addr));
+
+    printf("******Test pm_free() ******\n");
+
+    printf("Before free .....\n");
+    printf("v1 used: %d, v1 swapped: %d\n", v1->used, v1->swapped);
+    printf("v3 used: %d, v3 swapped: %d\n", v3->used, v3->swapped);
+    printf("After free .....\n");
+    pm_free(v1);
+    printf("v1 used: %d, v1 swapped: %d\n", v1->used, v1->swapped);
+    pm_free(v3);
+    printf("v3 used: %d, v3 swapped: %d\n", v3->used, v3->swapped);
+
+    virtual_t *v8 = pm_malloc(4 * 1024 * sizeof(char));
+    printf("v8 allocated physcial address is %p\n", v8->physical->physical_addr);
+    printf("v8 used: %d, v8 swapped: %d\n", v8->used, v8->swapped);
 
     return 0;
 }
