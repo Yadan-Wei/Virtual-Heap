@@ -2,40 +2,14 @@
 #include <stdlib.h>
 #include <stddef.h>
 #include <string.h>
+#include <pthread.h>
 
-#define PHYSICAL_SIZE (20 * 1024)
-#define PAGE_SIZE (4 * 1024)
-#define FILEPATH "memory.dat"
+#include "virtualHeap.h"
 
-#define VIRTUAL_SIZE (2 * PHYSICAL_SIZE)
-#define VIRTUAL_BLOCK_NUM (VIRTUAL_SIZE / PAGE_SIZE)
-#define PHYSICAL_BLOCK_NUM (PHYSICAL_SIZE / PAGE_SIZE)
 
-typedef struct physical_t
-{
-    int used;
-    size_t size;
-    void *physical_addr;
-} physical_t;
-
-typedef struct virtual_t
-{
-    int swapped;
-    int used;
-    long int offset;
-    physical_t *physical;
-    size_t size;
-} virtual_t;
-
-static unsigned char pm_heap[PHYSICAL_SIZE];
-static virtual_t pm_virtual[VIRTUAL_BLOCK_NUM];
-static physical_t pm_physical[PHYSICAL_BLOCK_NUM];
-
-int physical_available = PHYSICAL_BLOCK_NUM;
-int virtual_available = VIRTUAL_BLOCK_NUM;
+pthread_mutex_t vm_lock;
 
 // init all physical blocks point to physical address
-
 void pm_init()
 {
 
@@ -193,6 +167,8 @@ Malloc funtcion return a pointer to virtual block
 */
 virtual_t *pm_malloc(size_t size)
 {
+    pthread_mutex_lock(&vm_lock);   // thread safety 
+
     if (is_virtual_full())
     {
         return NULL;
@@ -201,6 +177,8 @@ virtual_t *pm_malloc(size_t size)
     virtual_block->used = 1;
     virtual_block->size = size;
     virtual_available -= 1;
+
+    pthread_mutex_unlock(&vm_lock);
     return virtual_block;
 }
 
@@ -247,7 +225,7 @@ Free used memory from file or physical.
 */
 void pm_free(virtual_t *virtual_block)
 {
-
+    pthread_mutex_lock(&vm_lock);
     if (virtual_block->swapped)
     {
         virtual_block->swapped = 0;
@@ -261,72 +239,46 @@ void pm_free(virtual_t *virtual_block)
     }
     virtual_block->used = 0;
     virtual_available += 1;
+    pthread_mutex_unlock(&vm_lock);
 }
 
-int main()
-{
-    pm_init();
-    printf("******Test pm_malloc can assign more memory than actual physcial volume.*********\n");
-    virtual_t *v1 = pm_malloc(4 * 1024 * sizeof(char));
-    printf("v1 allocated physcial address is %p\n", v1->physical->physical_addr);
-    printf("v1 used: %d, v1 swapped: %d\n", v1->used, v1->swapped);
-    pm_check(v1);
-    char *a = (char *)(v1->physical->physical_addr);
-    strcpy(a, "Hello World!");
-    printf("the value assigned to v1 is %s\n", (char *)(v1->physical->physical_addr));
+/*
+Write with thread safety
+*/
+void pm_write(virtual_t *virtual_block, char *string) {
+    pthread_mutex_lock(&vm_lock);
 
-    virtual_t *v2 = pm_malloc(4 * 1024 * sizeof(char));
-    printf("v2 allocated physcial address is %p\n", v2->physical->physical_addr);
-    printf("v2 used: %d, v2 swapped: %d\n", v2->used, v2->swapped);
+    // check if physical page present
+    pm_check(virtual_block);
+    // write to the physical address
+    char *paddr = virtual_block->physical->physical_addr;
+    strcpy(paddr, string);
 
-    pm_check(v2);
-    char *b = (char *)(v2->physical->physical_addr);
-    strcpy(b, "Hello CS5600!");
-    printf("the value assigned to v2 is %s\n", (char *)(v2->physical->physical_addr));
+    pthread_mutex_unlock(&vm_lock);
+}
 
-    virtual_t *v3 = pm_malloc(4 * 1024 * sizeof(char));
-    printf("v3 allocated physcial address is %p\n", v3->physical->physical_addr);
-    printf("v3 used: %d, v3 swapped: %d\n", v3->used, v3->swapped);
-    virtual_t *v4 = pm_malloc(4 * 1024 * sizeof(char));
-    printf("v4 allocated physcial address is %p\n", v4->physical->physical_addr);
-    printf("v4 used: %d, v4 swapped: %d\n", v4->used, v4->swapped);
-    virtual_t *v5 = pm_malloc(4 * 1024 * sizeof(char));
-    printf("v5 allocated physcial address is %p\n", v5->physical->physical_addr);
-    printf("v5 used: %d, v5 swapped: %d\n", v5->used, v5->swapped);
-    virtual_t *v6 = pm_malloc(4 * 1024 * sizeof(char));
-    printf("v6 allocated physcial address is %p\n", v6->physical->physical_addr);
-    printf("v6 used: %d, v6 swapped: %d\n", v6->used, v6->swapped);
-    virtual_t *v7 = pm_malloc(4 * 1024 * sizeof(char));
-    printf("v7 allocated physcial address is %p\n", v7->physical->physical_addr);
-    printf("v7 used: %d, v7 swapped: %d\n", v7->used, v7->swapped);
+/*
+Read with thread safety
+*/
+char* pm_read(virtual_t *virtual_block) {
+    pthread_mutex_lock(&vm_lock);
 
-    printf("*******After allocate v6, v7 check v1, v2 is swapped******\n");
-    printf("v1 used: %d, v1 swapped: %d, v1 offset: %ld\n", v1->used, v1->swapped, v1->offset);
-    printf("v2 used: %d, v2 swapped: %d, v2 offset: %ld\n", v2->used, v2->swapped, v2->offset);
+    // check if physical page present
+    pm_check(virtual_block);
+    // read starting at the physical address
+    char *paddr = virtual_block->physical->physical_addr;
+    
+    pthread_mutex_unlock(&vm_lock);
+    return paddr;
+}
 
-    printf("******Test reuse v1, v2 and swap in v1, v2 from file.*****\n");
-    pm_check(v1);
-    printf("v1 used: %d, v1 swapped: %d\n", v1->used, v1->swapped);
-    printf("the value assigned to v1 is %s\n", (char *)(v1->physical->physical_addr));
 
-    pm_check(v2);
-    printf("v2 used: %d, v2 swapped: %d\n", v2->used, v2->swapped);
-    printf("the value assigned to v2 is %s\n", (char *)(v2->physical->physical_addr));
+int get_page_num(virtual_t *virtual_bock) {
+    // start physical address
+    unsigned char *start = pm_heap;
+    // current allocated physical address
+    unsigned char *current = virtual_bock->physical->physical_addr;
 
-    printf("******Test pm_free() ******\n");
-
-    printf("Before free .....\n");
-    printf("v1 used: %d, v1 swapped: %d\n", v1->used, v1->swapped);
-    printf("v3 used: %d, v3 swapped: %d\n", v3->used, v3->swapped);
-    printf("After free .....\n");
-    pm_free(v1);
-    printf("v1 used: %d, v1 swapped: %d\n", v1->used, v1->swapped);
-    pm_free(v3);
-    printf("v3 used: %d, v3 swapped: %d\n", v3->used, v3->swapped);
-
-    virtual_t *v8 = pm_malloc(4 * 1024 * sizeof(char));
-    printf("v8 allocated physcial address is %p\n", v8->physical->physical_addr);
-    printf("v8 used: %d, v8 swapped: %d\n", v8->used, v8->swapped);
-
-    return 0;
+    int page_num = (current - start) / PAGE_SIZE;
+    return page_num;
 }
