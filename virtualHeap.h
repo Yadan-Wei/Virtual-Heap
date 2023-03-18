@@ -104,13 +104,16 @@ void pm_free(virtual_t *virtual_block);
 /*
 Write with thread safety
 */
-void pm_write(virtual_t *virtual_block, char *string);
+void pm_write(virtual_t *virtual_block, char *string, int size);
 
 /*
 Read with thread safety
 */
 char* pm_read(virtual_t *virtual_block);
 
+/*
+Return physical block number that is mapped to a virtual block
+*/
 int get_page_num(virtual_t *virtual_bock);
 
 

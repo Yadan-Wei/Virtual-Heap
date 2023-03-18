@@ -246,14 +246,14 @@ void pm_free(virtual_t *virtual_block)
 /*
 Write with thread safety
 */
-void pm_write(virtual_t *virtual_block, char *string) {
+void pm_write(virtual_t *virtual_block, char *string, int size) {
     pthread_mutex_lock(&vm_lock);
 
     // check if physical page present
     pm_check(virtual_block);
     // write to the physical address
     char *paddr = virtual_block->physical->physical_addr;
-    strcpy(paddr, string);
+    strncpy(paddr, string, size);
 
     pthread_mutex_unlock(&vm_lock);
 }
@@ -274,6 +274,9 @@ char* pm_read(virtual_t *virtual_block) {
 }
 
 
+/*
+Return physical block number that is mapped to a virtual block
+*/
 int get_page_num(virtual_t *virtual_bock) {
     // start physical address
     unsigned char *start = pm_heap;
