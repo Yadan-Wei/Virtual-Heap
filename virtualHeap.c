@@ -7,7 +7,7 @@
 #include "virtualHeap.h"
 
 
-pthread_mutex_t vm_lock;
+pthread_mutex_t vm_lock = PTHREAD_MUTEX_INITIALIZER;
 
 // init all physical blocks point to physical address
 void pm_init()
@@ -171,6 +171,7 @@ virtual_t *pm_malloc(size_t size)
 
     if (is_virtual_full())
     {
+        pthread_mutex_unlock(&vm_lock);   // unlock the mutex, so thread can exit
         return NULL;
     }
     virtual_t *virtual_block = find_first_available_virtual_block();

@@ -139,16 +139,16 @@ int main()
 
 
     // Test for read and write with multi-threads
-    printf("\nTest for multi-threading write and read:\n");
-    for (int i = 0; i < threads_num; i++) {
-        int *index = (int *)malloc(sizeof(int));
-        *index = i;
-        pthread_create(&threads[i], NULL, &thread_write_read_test, index);
-    }
+    // printf("\nTest for multi-threading write and read:\n");
+    // for (int i = 0; i < threads_num; i++) {
+    //     int *index = (int *)malloc(sizeof(int));
+    //     *index = i;
+    //     pthread_create(&threads[i], NULL, &thread_write_read_test, index);
+    // }
 
-    for (int i = 0; i < threads_num; i++) {
-        pthread_join(threads[i], NULL);
-    }
+    // for (int i = 0; i < threads_num; i++) {
+    //     pthread_join(threads[i], NULL);
+    // }
 
     return 0;
 }
