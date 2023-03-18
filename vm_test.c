@@ -9,12 +9,22 @@
 
 // Global variables 
 const int BUFFER_SIZE = 50;
-const int blocks_num = 12;
-const int threads_num = 12;
-virtual_t *virt_blocks[blocks_num];
+const int BLOCKS_NUM = 12;
+const int THREADS_NUM = 12;
+virtual_t *VIRT_BLOCKS[BLOCKS_NUM];
 
-// Functions prototype
+// Function prototypes
 void init_virt_blocks();
+void print_virt_blocks();
+void alloc_one_virtual_mem_test(int index);
+void free_one_virtual_mem_test(int index);
+void alloc_full_virtual_mem_test();
+void free_full_virtual_mem_test();
+void simple_write_read_test(int index);
+void full_mem_write_test();
+void full_mem_read_test(int index);
+
+
 void *thread_alloc_routine(void *arg);
 void *thread_free_routine(void *arg);
 void *thread_write_read_routine(void *arg);
@@ -26,86 +36,54 @@ int main()
 {
     pm_init();
 
-    // Test for malloc and free in main thread
-    printf("******Test pm_malloc can assign more memory than actual physcial volume.*********\n");
-    virtual_t *v1 = pm_malloc(4 * 1024 * sizeof(char));
-    printf("v1 allocated physcial address is %p\n", v1->physical->physical_addr);
-    printf("v1 used: %d, v1 swapped: %d\n", v1->used, v1->swapped);
-    pm_check(v1);
-    char *a = (char *)(v1->physical->physical_addr);
-    strcpy(a, "Hello World!");
-    printf("the value assigned to v1 is %s\n", (char *)(v1->physical->physical_addr));
-
-    virtual_t *v2 = pm_malloc(4 * 1024 * sizeof(char));
-    printf("v2 allocated physcial address is %p\n", v2->physical->physical_addr);
-    printf("v2 used: %d, v2 swapped: %d\n", v2->used, v2->swapped);
-
-    pm_check(v2);
-    char *b = (char *)(v2->physical->physical_addr);
-    strcpy(b, "Hello CS5600!");
-    printf("the value assigned to v2 is %s\n", (char *)(v2->physical->physical_addr));
-
-    virtual_t *v3 = pm_malloc(4 * 1024 * sizeof(char));
-    printf("v3 allocated physcial address is %p\n", v3->physical->physical_addr);
-    printf("v3 used: %d, v3 swapped: %d\n", v3->used, v3->swapped);
-    virtual_t *v4 = pm_malloc(4 * 1024 * sizeof(char));
-    printf("v4 allocated physcial address is %p\n", v4->physical->physical_addr);
-    printf("v4 used: %d, v4 swapped: %d\n", v4->used, v4->swapped);
-    virtual_t *v5 = pm_malloc(4 * 1024 * sizeof(char));
-    printf("v5 allocated physcial address is %p\n", v5->physical->physical_addr);
-    printf("v5 used: %d, v5 swapped: %d\n", v5->used, v5->swapped);
-    virtual_t *v6 = pm_malloc(4 * 1024 * sizeof(char));
-    printf("v6 allocated physcial address is %p\n", v6->physical->physical_addr);
-    printf("v6 used: %d, v6 swapped: %d\n", v6->used, v6->swapped);
-    virtual_t *v7 = pm_malloc(4 * 1024 * sizeof(char));
-    printf("v7 allocated physcial address is %p\n", v7->physical->physical_addr);
-    printf("v7 used: %d, v7 swapped: %d\n", v7->used, v7->swapped);
-
-    printf("*******After allocate v6, v7 check v1, v2 is swapped******\n");
-    printf("v1 used: %d, v1 swapped: %d, v1 offset: %ld\n", v1->used, v1->swapped, v1->offset);
-    printf("v2 used: %d, v2 swapped: %d, v2 offset: %ld\n", v2->used, v2->swapped, v2->offset);
-
-    printf("******Test reuse v1, v2 and swap in v1, v2 from file.*****\n");
-    pm_check(v1);
-    printf("v1 used: %d, v1 swapped: %d\n", v1->used, v1->swapped);
-    printf("the value assigned to v1 is %s\n", (char *)(v1->physical->physical_addr));
-
-    pm_check(v2);
-    printf("v2 used: %d, v2 swapped: %d\n", v2->used, v2->swapped);
-    printf("the value assigned to v2 is %s\n", (char *)(v2->physical->physical_addr));
-
-    printf("******Test pm_free() ******\n");
-
-    printf("Before free .....\n");
-    printf("v1 used: %d, v1 swapped: %d\n", v1->used, v1->swapped);
-    printf("v3 used: %d, v3 swapped: %d\n", v3->used, v3->swapped);
-    printf("After free .....\n");
-    pm_free(v1);
-    printf("v1 used: %d, v1 swapped: %d\n", v1->used, v1->swapped);
-    pm_free(v3);
-    printf("v3 used: %d, v3 swapped: %d\n", v3->used, v3->swapped);
-
-    virtual_t *v8 = pm_malloc(4 * 1024 * sizeof(char));
-    printf("v8 allocated physcial address is %p\n", v8->physical->physical_addr);
-    printf("v8 used: %d, v8 swapped: %d\n", v8->used, v8->swapped);
-    printf("\n");
-
-    // free allocated memory
-    pm_free(v2);
-    pm_free(v4);
-    pm_free(v5);
-    pm_free(v6);
-    pm_free(v7);
-    pm_free(v8);
 
     // Setup a global array for virtual blocks
     init_virt_blocks();
     
-    // Test for malloc with multi-threads 
-    printf("\nTest for multi-threading malloc:\n");
-    thread_alloc_test();
+    printf("\n***** Start testing for main thread *****\n");
+    printf("Before allocation: \n");
+    print_virt_blocks();
+
+    int test_block = 0;
+    // test for single pm_malloc()
+    alloc_one_virtual_mem_test(test_block);
+    print_virt_blocks();
+
+    // test for single pm_free()
+    free_one_virtual_mem_test(test_block);
+    print_virt_blocks();
+    
+    // test for pm_malloc() to allocate all virtual memory blocks
+    alloc_full_virtual_mem_test();
+    print_virt_blocks();
+    
+    // test for pm_free() to free all allocated virtual memory blocks
+    free_full_virtual_mem_test();
+    print_virt_blocks();
+    
+    // test for pm_write() to write to one virtual memory block
+    simple_write_read_test(test_block);
+
+    // test for pm_write() to write to all virtual memory block
+    full_mem_write_test();
+
+    // test for pm_read() to read swapped out virtual memory blocks
+    int read_vb1 = 1;
+    int read_vb2 = 2;
+    full_mem_read_test(read_vb1);
+    full_mem_read_test(read_vb2);
+
+    // free all virtual memory after done with main thread tests
+    free_full_virtual_mem_test();
+
 
     // Test for read and write with multi-threads
+    printf("\n***** Start testing for multi-threading processes *****\n");
+    init_virt_blocks();
+
+    // Test for malloc with multi-threads 
+    thread_alloc_test();
+
     printf("\nTest for multi-threading write and read:\n");
     thread_write_read_test();
 
@@ -116,32 +94,134 @@ int main()
     return 0;
 }
 
-
 /*
 Initialize the array of virtual_t type to NULL before testing
 */
 void init_virt_blocks() {
-    for (int i = 0; i < blocks_num; i++) {
-        virt_blocks[i] = NULL;
+    for (int i = 0; i < BLOCKS_NUM; i++) {
+        VIRT_BLOCKS[i] = NULL;
     }
+}
+
+
+void alloc_one_virtual_mem_test(int index) {
+    printf("After allocating vBlock #%d: \n", index);
+    VIRT_BLOCKS[index] = pm_malloc(PAGE_SIZE);
+    assert(NULL != VIRT_BLOCKS[index]);
+}
+
+void free_one_virtual_mem_test(int index) {
+    printf("After freeing vBlock: %d\n", index);
+    pm_free(VIRT_BLOCKS[index]);
+}
+
+void alloc_full_virtual_mem_test() {
+    printf("After allocating full memory blocks:\n");
+    for (int i = 0; i < BLOCKS_NUM; i++) {
+        VIRT_BLOCKS[i] = pm_malloc(PAGE_SIZE);
+    }
+}
+
+void free_full_virtual_mem_test() {
+    printf("Done with freeing full memory blocks:\n");
+    for (int i = 0; i < BLOCKS_NUM; i++) {
+        if (VIRT_BLOCKS[i]){
+            pm_free(VIRT_BLOCKS[i]);
+        }
+    }
+}
+
+void simple_write_read_test(int test_block) {
+    char string[BUFFER_SIZE] = "simple_write_read_test";  // string to write
+    // allocate one block
+    VIRT_BLOCKS[test_block] = pm_malloc(PAGE_SIZE);
+    // write to allocated test_block
+    pm_write(VIRT_BLOCKS[test_block], string, strlen(string));
+    // print out the result
+    printf("After write to vblock #%d:\n", test_block);
+    print_virt_blocks();
+
+    // free allocated memory block after done with test
+    pm_free(VIRT_BLOCKS[test_block]);
+    printf("Done with write test, vBlock #%d is free\n\n", test_block);
+}
+
+void full_mem_write_test() {
+    char string[BUFFER_SIZE];
+    int size = 0;
+
+    for (int i = 0; i < BLOCKS_NUM; i++) {
+        VIRT_BLOCKS[i] = pm_malloc(PAGE_SIZE);
+        sprintf(string, "full_mem_write_test_%d", i);
+        size = strlen(string);
+        // write to a block
+        if (VIRT_BLOCKS[i]) {
+            pm_write(VIRT_BLOCKS[i], string, size);
+        }
+    }
+    printf("After writing to all memory blocks:\n");
+    print_virt_blocks();
+}
+
+void full_mem_read_test(int test_block) {
+    // read swapped blocks on virtual memory
+    if (!VIRT_BLOCKS[test_block]) {
+        printf("full_mem_read_test fail: block #%d is null.", test_block);
+    }
+    pm_read(VIRT_BLOCKS[test_block]);
+    printf("After reading vblock #%d:\n", test_block);
+    print_virt_blocks();
+}
+
+
+void print_virt_blocks() {
+    // Header for virt_blocks table
+    char header[BUFFER_SIZE] = "vBlock used swapped pBock string";
+
+    int used, swapped, pblock;
+    char line[BUFFER_SIZE];
+    
+
+    printf("-----------------------------------------\n");
+    printf("%s\n", header);
+    for (int i = 0; i < BLOCKS_NUM; i++) {
+        // set line as empty string
+        memset(line, 0, BUFFER_SIZE);  
+
+        if (VIRT_BLOCKS[i] == NULL) {  // if the block is empty
+            used = 0;
+            swapped = 0;
+            pblock = -1;
+        } else {    // if the block is occupied
+            used = VIRT_BLOCKS[i]->used;
+            swapped = VIRT_BLOCKS[i]->swapped;
+            pblock = get_page_num(VIRT_BLOCKS[i]);
+            if (VIRT_BLOCKS[i]->physical) {
+                char *paddr = pm_read(VIRT_BLOCKS[i]);
+                sscanf(paddr, "%s", line);
+            }
+        }
+        printf("%5d%5d%5d%8d%25s\n", i, used, swapped, pblock, line);
+    }
+    printf("-----------------------------------------\n\n");
 }
 
 /*
 Test pm_malloc() function is thread-safe. 
 Here we allocate the virtual memory with multiple threads.
 If the memory is allocated successfully, assign each allocated the vritual memory 
-to the global variable, virt_blocks array.
+to the global variable, VIRT_BLOCKS array.
 */
 void thread_alloc_test() {
-    pthread_t threads[threads_num];
+    pthread_t threads[THREADS_NUM];
 
-    for (int i = 0; i < threads_num; i++) {
+    for (int i = 0; i < THREADS_NUM; i++) {
         int *index = (int *)malloc(sizeof(int));
         *index = i;
         pthread_create(&threads[i], NULL, &thread_alloc_routine, index);
     }
 
-    for (int i = 0; i < threads_num; i++) {
+    for (int i = 0; i < THREADS_NUM; i++) {
         pthread_join(threads[i], NULL);
     }
 }
@@ -151,14 +231,14 @@ Test pm_free function is thread-safe.
 After allocating virtual memory in the virutal blocks, 
 */
 void thread_free_test() {
-    pthread_t threads[threads_num];
+    pthread_t threads[THREADS_NUM];
 
-    for (int i = 0; i < threads_num; i++) {
+    for (int i = 0; i < THREADS_NUM; i++) {
         int *index = (int *)malloc(sizeof(int));
         *index = i;
         pthread_create(&threads[i], NULL, &thread_free_routine, index);
     }
-    for (int i = 0; i < threads_num; i++) {
+    for (int i = 0; i < THREADS_NUM; i++) {
         pthread_join(threads[i], NULL);
     }
     printf("All blocks are free!\n");
@@ -169,15 +249,15 @@ Test read and write is thread-safe.
 Create multiple threads and call the write and read functions.
 */
 void thread_write_read_test() {
-    pthread_t threads[threads_num];
+    pthread_t threads[THREADS_NUM];
 
-    for (int i = 0; i < threads_num; i++) {
+    for (int i = 0; i < THREADS_NUM; i++) {
         int *index = (int *)malloc(sizeof(int));
         *index = i;
         pthread_create(&threads[i], NULL, &thread_write_read_routine, index);
     }
 
-    for (int i = 0; i < threads_num; i++) {
+    for (int i = 0; i < THREADS_NUM; i++) {
         pthread_join(threads[i], NULL);
     }
 }
@@ -194,8 +274,8 @@ void *thread_write_read_routine(void *arg) {
     sprintf(str, "Hello from virtual block %d", block);
     int size = strlen(str);
 
-    if (virt_blocks[block]) {
-        pm_write(virt_blocks[block], str, size);
+    if (VIRT_BLOCKS[block]) {
+        pm_write(VIRT_BLOCKS[block], str, size);
         printf("Thread %d done with writing...\n", block);
     }
 
@@ -203,8 +283,8 @@ void *thread_write_read_routine(void *arg) {
     char read_line[BUFFER_SIZE];
     sprintf(read_line, "virt_block_%d read: ", block);
 
-    if (virt_blocks[block]) {
-        char *paddr = pm_read(virt_blocks[block]);
+    if (VIRT_BLOCKS[block]) {
+        char *paddr = pm_read(VIRT_BLOCKS[block]);
         printf("%s ", read_line);
         for (int i = 0; i < size; i++) {
             putchar(*paddr++);
@@ -215,16 +295,16 @@ void *thread_write_read_routine(void *arg) {
 }
 
 /*
-In this routine, each thread can allocate virtual memory for virtual_blocks
+In this routine, each thread can allocate virtual memory for VIRT_BLOCKS
 */
 void *thread_alloc_routine(void *arg) {
     int block = *(int *)arg;
-    virt_blocks[block] = pm_malloc(PAGE_SIZE);
-    if (!virt_blocks[block]) {
-        printf("virt_block_%d fails to allocate. Virtual memory is full.\n", block);
+    VIRT_BLOCKS[block] = pm_malloc(PAGE_SIZE);
+    if (!VIRT_BLOCKS[block]) {
+        printf("Thread %d: virt_block_%d fails to allocate. Virtual memory is full.\n", block, block);
         return NULL;
     }
-    int page_num = get_page_num(virt_blocks[block]);
+    int page_num = get_page_num(VIRT_BLOCKS[block]);
     printf("virt_block_%d allocated page #%d\n", block, page_num);
 
     free(arg);
@@ -232,13 +312,13 @@ void *thread_alloc_routine(void *arg) {
 }
 
 /*
-In this routing, each thread can free the allocated memory at virtual_blocks
+In this routing, each thread can free the allocated memory at VIRT_BLOCKS
 */
 void *thread_free_routine(void *arg) {
     int tid = *(int *)arg;
-    if (virt_blocks[tid]) {  // if the virtual block is not empty
-        pm_free(virt_blocks[tid]);
-        assert(0 == virt_blocks[tid]->used);
+    if (VIRT_BLOCKS[tid]) {  // if the virtual block is not empty
+        pm_free(VIRT_BLOCKS[tid]);
+        assert(0 == VIRT_BLOCKS[tid]->used);
     }
     return NULL;
 }

@@ -35,14 +35,7 @@ Check if physical is exhausted.
 */
 int is_physical_full()
 {
-    if (physical_available == 0)
-    {
-        return 1;
-    }
-    else
-    {
-        return 0;
-    }
+    return (physical_available == 0);
 }
 
 /*
@@ -50,14 +43,7 @@ Check if virtual is exhausted.
 */
 int is_virtual_full()
 {
-    if (virtual_available == 0)
-    {
-        return 1;
-    }
-    else
-    {
-        return 0;
-    }
+    return (virtual_available == 0);
 }
 
 /*
@@ -94,6 +80,11 @@ virtual_t *find_first_used_not_swapped_virtual_block()
     }
     return res;
 }
+
+// virtual_t *save_block_to_disk_fifo() {
+//     virtual_t* res = NULL;
+
+// }
 
 /*
 Swap out the first used but not swapped virtual block's physical block and return it.
@@ -278,11 +269,13 @@ char* pm_read(virtual_t *virtual_block) {
 Return physical block number that is mapped to a virtual block
 */
 int get_page_num(virtual_t *virtual_bock) {
+    int page_num = -1;
     // start physical address
     unsigned char *start = pm_heap;
     // current allocated physical address
-    unsigned char *current = virtual_bock->physical->physical_addr;
-
-    int page_num = (current - start) / PAGE_SIZE;
+    if(virtual_bock->physical) {
+        unsigned char *current = virtual_bock->physical->physical_addr;
+        page_num = (current - start) / PAGE_SIZE;
+    }
     return page_num;
 }

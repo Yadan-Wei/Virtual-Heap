@@ -9,6 +9,7 @@
 #define VIRTUAL_BLOCK_NUM (VIRTUAL_SIZE / PAGE_SIZE)     // 10 pages
 #define PHYSICAL_BLOCK_NUM (PHYSICAL_SIZE / PAGE_SIZE)   // 5 pages
 
+
 /*
 Physical table entry 
 */
