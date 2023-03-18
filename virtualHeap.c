@@ -12,15 +12,15 @@ pthread_mutex_t vm_lock = PTHREAD_MUTEX_INITIALIZER;
 // init all physical blocks point to physical address
 void pm_init()
 {
-
-    for (int i = 0; i < PHYSICAL_BLOCK_NUM; i++)
+    int i;
+    for (i = 0; i < PHYSICAL_BLOCK_NUM; i++)
     {
         pm_physical[i].size = PAGE_SIZE;
         pm_physical[i].used = 0;
         pm_physical[i].physical_addr = (void *)(pm_heap + i * PAGE_SIZE);
     }
 
-    for (int i = 0; i < VIRTUAL_BLOCK_NUM; i++)
+    for (i = 0; i < VIRTUAL_BLOCK_NUM; i++)
     {
         pm_virtual[i].size = 0;
         pm_virtual[i].used = 0;
@@ -52,7 +52,8 @@ Find first unused physical block.
 physical_t *find_first_available_physical_block()
 {
     physical_t *res = NULL;
-    for (int i = 0; i < PHYSICAL_BLOCK_NUM; i++)
+    int i;
+    for (i = 0; i < PHYSICAL_BLOCK_NUM; i++)
     {
         if (!pm_physical[i].used)
         {
@@ -69,7 +70,8 @@ Find first used but not swapped virtual block.
 virtual_t *find_first_used_not_swapped_virtual_block()
 {
     virtual_t *res = NULL;
-    for (int i = 0; i < VIRTUAL_BLOCK_NUM; i++)
+    int i;
+    for (i = 0; i < VIRTUAL_BLOCK_NUM; i++)
     {
 
         if (pm_virtual[i].used && !pm_virtual[i].swapped)
@@ -81,10 +83,6 @@ virtual_t *find_first_used_not_swapped_virtual_block()
     return res;
 }
 
-// virtual_t *save_block_to_disk_fifo() {
-//     virtual_t* res = NULL;
-
-// }
 
 /*
 Swap out the first used but not swapped virtual block's physical block and return it.
@@ -141,7 +139,8 @@ Find the first available virtual block to assign, and map it with physical block
 virtual_t *find_first_available_virtual_block()
 {
     virtual_t *res = NULL;
-    for (int i = 0; i < VIRTUAL_BLOCK_NUM; i++)
+    int i;
+    for (i = 0; i < VIRTUAL_BLOCK_NUM; i++)
     {
         if (!pm_virtual[i].used)
         {

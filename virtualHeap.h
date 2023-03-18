@@ -39,6 +39,7 @@ static physical_t pm_physical[PHYSICAL_BLOCK_NUM]; // physical memory table
 static int physical_available = PHYSICAL_BLOCK_NUM;
 static int virtual_available = VIRTUAL_BLOCK_NUM;
 
+
 /*
 Initialize physical memory table and virtual memory table.
 Initially, each physical table entry points at the corresponding physical memory block;

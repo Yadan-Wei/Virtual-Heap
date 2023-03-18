@@ -98,7 +98,8 @@ int main()
 Initialize the array of virtual_t type to NULL before testing
 */
 void init_virt_blocks() {
-    for (int i = 0; i < BLOCKS_NUM; i++) {
+    int i;
+    for (i = 0; i < BLOCKS_NUM; i++) {
         VIRT_BLOCKS[i] = NULL;
     }
 }
@@ -117,14 +118,16 @@ void free_one_virtual_mem_test(int index) {
 
 void alloc_full_virtual_mem_test() {
     printf("After allocating full memory blocks:\n");
-    for (int i = 0; i < BLOCKS_NUM; i++) {
+    int i;
+    for (i = 0; i < BLOCKS_NUM; i++) {
         VIRT_BLOCKS[i] = pm_malloc(PAGE_SIZE);
     }
 }
 
 void free_full_virtual_mem_test() {
     printf("Done with freeing full memory blocks:\n");
-    for (int i = 0; i < BLOCKS_NUM; i++) {
+    int i;
+    for (i = 0; i < BLOCKS_NUM; i++) {
         if (VIRT_BLOCKS[i]){
             pm_free(VIRT_BLOCKS[i]);
         }
@@ -149,8 +152,8 @@ void simple_write_read_test(int test_block) {
 void full_mem_write_test() {
     char string[BUFFER_SIZE];
     int size = 0;
-
-    for (int i = 0; i < BLOCKS_NUM; i++) {
+    int i;
+    for (i = 0; i < BLOCKS_NUM; i++) {
         VIRT_BLOCKS[i] = pm_malloc(PAGE_SIZE);
         sprintf(string, "full_mem_write_test_%d", i);
         size = strlen(string);
@@ -180,11 +183,11 @@ void print_virt_blocks() {
 
     int used, swapped, pblock;
     char line[BUFFER_SIZE];
-    
+    int i;
 
     printf("-----------------------------------------\n");
     printf("%s\n", header);
-    for (int i = 0; i < BLOCKS_NUM; i++) {
+    for (i = 0; i < BLOCKS_NUM; i++) {
         // set line as empty string
         memset(line, 0, BUFFER_SIZE);  
 
@@ -214,15 +217,16 @@ to the global variable, VIRT_BLOCKS array.
 */
 void thread_alloc_test() {
     pthread_t threads[THREADS_NUM];
+    int i, j;
 
-    for (int i = 0; i < THREADS_NUM; i++) {
+    for (i = 0; i < THREADS_NUM; i++) {
         int *index = (int *)malloc(sizeof(int));
         *index = i;
         pthread_create(&threads[i], NULL, &thread_alloc_routine, index);
     }
 
-    for (int i = 0; i < THREADS_NUM; i++) {
-        pthread_join(threads[i], NULL);
+    for (j = 0; j < THREADS_NUM; j++) {
+        pthread_join(threads[j], NULL);
     }
 }
 
@@ -232,14 +236,15 @@ After allocating virtual memory in the virutal blocks,
 */
 void thread_free_test() {
     pthread_t threads[THREADS_NUM];
+    int i, j;
 
-    for (int i = 0; i < THREADS_NUM; i++) {
+    for (i = 0; i < THREADS_NUM; i++) {
         int *index = (int *)malloc(sizeof(int));
         *index = i;
         pthread_create(&threads[i], NULL, &thread_free_routine, index);
     }
-    for (int i = 0; i < THREADS_NUM; i++) {
-        pthread_join(threads[i], NULL);
+    for (j = 0; j < THREADS_NUM; j++) {
+        pthread_join(threads[j], NULL);
     }
     printf("All blocks are free!\n");
 }
@@ -250,15 +255,16 @@ Create multiple threads and call the write and read functions.
 */
 void thread_write_read_test() {
     pthread_t threads[THREADS_NUM];
+    int i, j;
 
-    for (int i = 0; i < THREADS_NUM; i++) {
+    for (i = 0; i < THREADS_NUM; i++) {
         int *index = (int *)malloc(sizeof(int));
         *index = i;
         pthread_create(&threads[i], NULL, &thread_write_read_routine, index);
     }
 
-    for (int i = 0; i < THREADS_NUM; i++) {
-        pthread_join(threads[i], NULL);
+    for (j = 0; j < THREADS_NUM; j++) {
+        pthread_join(threads[j], NULL);
     }
 }
 
@@ -282,11 +288,12 @@ void *thread_write_read_routine(void *arg) {
     // Read from the physical memory
     char read_line[BUFFER_SIZE];
     sprintf(read_line, "virt_block_%d read: ", block);
+    int i;
 
     if (VIRT_BLOCKS[block]) {
         char *paddr = pm_read(VIRT_BLOCKS[block]);
         printf("%s ", read_line);
-        for (int i = 0; i < size; i++) {
+        for (i = 0; i < size; i++) {
             putchar(*paddr++);
         }
         printf("\n");
