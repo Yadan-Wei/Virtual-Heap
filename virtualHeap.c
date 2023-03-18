@@ -171,7 +171,7 @@ virtual_t *pm_malloc(size_t size)
 
     if (is_virtual_full())
     {
-        pthread_mutex_unlock(&vm_lock);   // unlock the mutex, so thread can exit
+        pthread_mutex_unlock(&vm_lock);   // unlock the mutex, so other thread can access
         return NULL;
     }
     virtual_t *virtual_block = find_first_available_virtual_block();
