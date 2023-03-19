@@ -33,6 +33,7 @@ void thread_write_read_test();
 
 int main()
 {
+    pm_init();
 
     // Setup a global array for virtual blocks
     init_virt_blocks();

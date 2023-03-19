@@ -15,11 +15,8 @@ Clean disk file.
 */
 void pm_init()
 {
-    int i;
-    for (i = 0; i < PHYSICAL_BLOCK_NUM; i++)
-
-        // open file in write mode
-        FILE *fp = fopen(FILEPATH, "w");
+    // open file in write mode
+    FILE *fp = fopen(FILEPATH, "w");
     if (fp == NULL)
     {
         printf("Failed to open file.\n");
@@ -32,6 +29,7 @@ void pm_init()
 
     // close the file
     fclose(fp);
+    int i;
 
     for (int i = 0; i < PHYSICAL_BLOCK_NUM; i++)
     {
