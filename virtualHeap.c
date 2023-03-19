@@ -6,14 +6,34 @@
 
 #include "virtualHeap.h"
 
-
 pthread_mutex_t vm_lock = PTHREAD_MUTEX_INITIALIZER;
 
-// init all physical blocks point to physical address
+/*
+Init physical blocks point to physical address
+init all virtual blocks
+Clean disk file.
+*/
 void pm_init()
 {
     int i;
     for (i = 0; i < PHYSICAL_BLOCK_NUM; i++)
+
+        // open file in write mode
+        FILE *fp = fopen(FILEPATH, "w");
+    if (fp == NULL)
+    {
+        printf("Failed to open file.\n");
+        exit(1);
+    }
+
+    // write an empty string to the file
+    // so that the file is initialized
+    fwrite("", 1, 0, fp);
+
+    // close the file
+    fclose(fp);
+
+    for (int i = 0; i < PHYSICAL_BLOCK_NUM; i++)
     {
         pm_physical[i].size = PAGE_SIZE;
         pm_physical[i].used = 0;
@@ -82,7 +102,6 @@ virtual_t *find_first_used_not_swapped_virtual_block()
     }
     return res;
 }
-
 
 /*
 Swap out the first used but not swapped virtual block's physical block and return it.
@@ -157,11 +176,12 @@ Malloc funtcion return a pointer to virtual block
 */
 virtual_t *pm_malloc(size_t size)
 {
-    pthread_mutex_lock(&vm_lock);   // thread safety 
+    pthread_mutex_lock(&vm_lock); // thread safety
 
     if (is_virtual_full())
     {
-        pthread_mutex_unlock(&vm_lock);   // unlock the mutex, so other thread can access
+        printf("Virtual memory is full. Please check your memory usage.\n");
+        pthread_mutex_unlock(&vm_lock); // unlock the mutex, so other thread can access
         return NULL;
     }
     virtual_t *virtual_block = find_first_available_virtual_block();
@@ -236,7 +256,8 @@ void pm_free(virtual_t *virtual_block)
 /*
 Write with thread safety
 */
-void pm_write(virtual_t *virtual_block, char *string, int size) {
+void pm_write(virtual_t *virtual_block, char *string, int size)
+{
     pthread_mutex_lock(&vm_lock);
 
     // check if physical page present
@@ -251,28 +272,30 @@ void pm_write(virtual_t *virtual_block, char *string, int size) {
 /*
 Read with thread safety
 */
-char* pm_read(virtual_t *virtual_block) {
+char *pm_read(virtual_t *virtual_block)
+{
     pthread_mutex_lock(&vm_lock);
 
     // check if physical page present
     pm_check(virtual_block);
     // read starting at the physical address
-    char *paddr = virtual_block->physical->physical_addr;
-    
+    char *paddr = (char *)(virtual_block->physical->physical_addr);
+
     pthread_mutex_unlock(&vm_lock);
     return paddr;
 }
 
-
 /*
 Return physical block number that is mapped to a virtual block
 */
-int get_page_num(virtual_t *virtual_bock) {
+int get_page_num(virtual_t *virtual_bock)
+{
     int page_num = -1;
     // start physical address
     unsigned char *start = pm_heap;
     // current allocated physical address
-    if(virtual_bock->physical) {
+    if (virtual_bock->physical)
+    {
         unsigned char *current = virtual_bock->physical->physical_addr;
         page_num = (current - start) / PAGE_SIZE;
     }
