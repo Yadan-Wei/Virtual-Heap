@@ -9,6 +9,7 @@
 #define VIRTUAL_BLOCK_NUM (VIRTUAL_SIZE / PAGE_SIZE)     // 10 pages
 #define PHYSICAL_BLOCK_NUM (PHYSICAL_SIZE / PAGE_SIZE)   // 5 pages
 
+
 /*
 Physical table entry 
 */
@@ -37,6 +38,7 @@ static physical_t pm_physical[PHYSICAL_BLOCK_NUM]; // physical memory table
 
 static int physical_available = PHYSICAL_BLOCK_NUM;
 static int virtual_available = VIRTUAL_BLOCK_NUM;
+
 
 /*
 Initialize physical memory table and virtual memory table.
@@ -104,13 +106,16 @@ void pm_free(virtual_t *virtual_block);
 /*
 Write with thread safety
 */
-void pm_write(virtual_t *virtual_block, char *string);
+void pm_write(virtual_t *virtual_block, char *string, int size);
 
 /*
 Read with thread safety
 */
 char* pm_read(virtual_t *virtual_block);
 
+/*
+Return physical block number that is mapped to a virtual block
+*/
 int get_page_num(virtual_t *virtual_bock);
 
 

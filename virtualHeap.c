@@ -15,7 +15,6 @@ Clean disk file.
 */
 void pm_init()
 {
-
     // open file in write mode
     FILE *fp = fopen(FILEPATH, "w");
     if (fp == NULL)
@@ -30,6 +29,7 @@ void pm_init()
 
     // close the file
     fclose(fp);
+    int i;
 
     for (int i = 0; i < PHYSICAL_BLOCK_NUM; i++)
     {
@@ -38,7 +38,7 @@ void pm_init()
         pm_physical[i].physical_addr = (void *)(pm_heap + i * PAGE_SIZE);
     }
 
-    for (int i = 0; i < VIRTUAL_BLOCK_NUM; i++)
+    for (i = 0; i < VIRTUAL_BLOCK_NUM; i++)
     {
         pm_virtual[i].size = 0;
         pm_virtual[i].used = 0;
@@ -53,14 +53,7 @@ Check if physical is exhausted.
 */
 int is_physical_full()
 {
-    if (physical_available == 0)
-    {
-        return 1;
-    }
-    else
-    {
-        return 0;
-    }
+    return (physical_available == 0);
 }
 
 /*
@@ -68,14 +61,7 @@ Check if virtual is exhausted.
 */
 int is_virtual_full()
 {
-    if (virtual_available == 0)
-    {
-        return 1;
-    }
-    else
-    {
-        return 0;
-    }
+    return (virtual_available == 0);
 }
 
 /*
@@ -84,7 +70,8 @@ Find first unused physical block.
 physical_t *find_first_available_physical_block()
 {
     physical_t *res = NULL;
-    for (int i = 0; i < PHYSICAL_BLOCK_NUM; i++)
+    int i;
+    for (i = 0; i < PHYSICAL_BLOCK_NUM; i++)
     {
         if (!pm_physical[i].used)
         {
@@ -101,7 +88,8 @@ Find first used but not swapped virtual block.
 virtual_t *find_first_used_not_swapped_virtual_block()
 {
     virtual_t *res = NULL;
-    for (int i = 0; i < VIRTUAL_BLOCK_NUM; i++)
+    int i;
+    for (i = 0; i < VIRTUAL_BLOCK_NUM; i++)
     {
 
         if (pm_virtual[i].used && !pm_virtual[i].swapped)
@@ -168,7 +156,8 @@ Find the first available virtual block to assign, and map it with physical block
 virtual_t *find_first_available_virtual_block()
 {
     virtual_t *res = NULL;
-    for (int i = 0; i < VIRTUAL_BLOCK_NUM; i++)
+    int i;
+    for (i = 0; i < VIRTUAL_BLOCK_NUM; i++)
     {
         if (!pm_virtual[i].used)
         {
@@ -265,15 +254,15 @@ void pm_free(virtual_t *virtual_block)
 /*
 Write with thread safety
 */
-void pm_write(virtual_t *virtual_block, char *string)
+void pm_write(virtual_t *virtual_block, char *string, int size)
 {
     pthread_mutex_lock(&vm_lock);
 
     // check if physical page present
     pm_check(virtual_block);
     // write to the physical address
-    char *paddr = (char *)(virtual_block->physical->physical_addr);
-    strcpy(paddr, string);
+    char *paddr = virtual_block->physical->physical_addr;
+    strncpy(paddr, string, size);
 
     pthread_mutex_unlock(&vm_lock);
 }
@@ -294,13 +283,19 @@ char *pm_read(virtual_t *virtual_block)
     return paddr;
 }
 
+/*
+Return physical block number that is mapped to a virtual block
+*/
 int get_page_num(virtual_t *virtual_bock)
 {
+    int page_num = -1;
     // start physical address
     unsigned char *start = pm_heap;
     // current allocated physical address
-    unsigned char *current = virtual_bock->physical->physical_addr;
-
-    int page_num = (current - start) / PAGE_SIZE;
+    if (virtual_bock->physical)
+    {
+        unsigned char *current = virtual_bock->physical->physical_addr;
+        page_num = (current - start) / PAGE_SIZE;
+    }
     return page_num;
 }

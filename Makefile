@@ -1,4 +1,4 @@
-CC=clang
+CC=gcc
 CFLAGS=-g -Wall -std=c99 
 LIBS=-lpthread
 DEPS=virtualHeap.h
