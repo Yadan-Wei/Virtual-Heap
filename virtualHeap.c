@@ -31,6 +31,7 @@ void pm_init()
     fclose(fp);
     int i;
 
+    // initial physical block array
     for (int i = 0; i < PHYSICAL_BLOCK_NUM; i++)
     {
         pm_physical[i].size = PAGE_SIZE;
@@ -38,6 +39,7 @@ void pm_init()
         pm_physical[i].physical_addr = (void *)(pm_heap + i * PAGE_SIZE);
     }
 
+    // initial virtual block array
     for (i = 0; i < VIRTUAL_BLOCK_NUM; i++)
     {
         pm_virtual[i].size = 0;
@@ -117,13 +119,16 @@ physical_t *swap_out()
         exit(1);
     }
     char *buffer = (char *)(swap_out_physical_block->physical_addr);
-    // printf("The buffer value is %s\n", buffer);
+
+    // move pointer to current end of file
     fseek(fp, 0, SEEK_END);
+    // record the offset
     long int offset = ftell(fp);
+    // write the content in the memory to the file
     fwrite(buffer, 1, swap_out_block->size, fp);
 
-    // printf("after writing offset is %ld\n", ftell(fp));
     fclose(fp);
+    // update the status of swap out virtual block
     swap_out_block->offset = offset;
     swap_out_block->physical = NULL;
     swap_out_block->swapped = 1;
@@ -137,16 +142,19 @@ else swap out the first used and not swapped virtual block's physical and use it
 void map_physical_virtual(virtual_t *virtual_block)
 {
     physical_t *physical_block;
+    // if physical block is full, swap out the first used but not swapped virtual block's physical
     if (is_physical_full())
     {
         physical_block = swap_out();
     }
+    // else find a unused physical block
     else
     {
         physical_block = find_first_available_physical_block();
         physical_block->used = 1;
         physical_available -= 1;
     }
+    // map physical and virtual
     virtual_block->physical = physical_block;
 }
 
@@ -176,12 +184,14 @@ virtual_t *pm_malloc(size_t size)
 {
     pthread_mutex_lock(&vm_lock); // thread safety
 
+    // when virtual is full, return NULL
     if (is_virtual_full())
     {
         printf("Virtual memory is full. Please check your memory usage.\n");
         pthread_mutex_unlock(&vm_lock); // unlock the mutex, so other thread can access
         return NULL;
     }
+    // find the first unused virtual block and map it with a physical block
     virtual_t *virtual_block = find_first_available_virtual_block();
     virtual_block->used = 1;
     virtual_block->size = size;
@@ -196,10 +206,12 @@ Swap in function, swap in a virtual block memory from file.
 */
 void swap_in(virtual_t *virtual_block)
 {
+    // if physical is not full, find a unused physical block
     if (!is_physical_full())
     {
         virtual_block->physical = find_first_available_physical_block();
     }
+    // else swap out a virtual block and use its physical block
     else
     {
         virtual_block->physical = swap_out();
@@ -211,15 +223,18 @@ void swap_in(virtual_t *virtual_block)
         printf("Failed to open file.\n");
         exit(1);
     }
+    // go to the location where the offset is
     fseek(fp, virtual_block->offset, SEEK_SET);
+    // read contents from file
     fread((char *)(virtual_block->physical->physical_addr), 1, virtual_block->size, fp);
     fclose(fp);
+    // update virtual block's status
     virtual_block->swapped = 0;
     virtual_block->offset = 0;
 }
 
 /*
-Check if a virtual block is swapped or not, if swapped, swap in else do nothing, return the physcial address that can be used.
+Check if a virtual block is swapped or not, if swapped, swap in else do nothing.
 */
 void pm_check(virtual_t *virtual_block)
 {
@@ -235,17 +250,20 @@ Free used memory from file or physical.
 void pm_free(virtual_t *virtual_block)
 {
     pthread_mutex_lock(&vm_lock);
+    // if virtual block is swapped just update its status
     if (virtual_block->swapped)
     {
         virtual_block->swapped = 0;
         virtual_block->offset = 0;
     }
+    // else update its physical block status
     else
     {
         virtual_block->physical->used = 0;
         virtual_block->physical = NULL;
         physical_available += 1;
     }
+    // increase available virtual number
     virtual_block->used = 0;
     virtual_available += 1;
     pthread_mutex_unlock(&vm_lock);

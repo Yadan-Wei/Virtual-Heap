@@ -1,23 +1,22 @@
 #ifndef VIRTUALHEAP_H
 #define VIRTUALHEAP_H
 
-#define PHYSICAL_SIZE (20 * 1024)   // 20KB
-#define PAGE_SIZE (4 * 1024)        // 4KB
-#define FILEPATH "memory.dat"       // virtual memory
+#define PHYSICAL_SIZE (20 * 1024) // 20KB
+#define PAGE_SIZE (4 * 1024)      // 4KB
+#define FILEPATH "memory.dat"     // virtual memory
 
 #define VIRTUAL_SIZE (2 * PHYSICAL_SIZE)
-#define VIRTUAL_BLOCK_NUM (VIRTUAL_SIZE / PAGE_SIZE)     // 10 pages
-#define PHYSICAL_BLOCK_NUM (PHYSICAL_SIZE / PAGE_SIZE)   // 5 pages
-
+#define VIRTUAL_BLOCK_NUM (VIRTUAL_SIZE / PAGE_SIZE)   // 10 pages
+#define PHYSICAL_BLOCK_NUM (PHYSICAL_SIZE / PAGE_SIZE) // 5 pages
 
 /*
-Physical table entry 
+Physical table entry
 */
 typedef struct physical_t
 {
     int used;
-    size_t size;         
-    void *physical_addr;  // map to physical memory address
+    size_t size;
+    void *physical_addr; // map to physical memory address
 } physical_t;
 
 /*
@@ -25,11 +24,11 @@ Virtual table entry
 */
 typedef struct virtual_t
 {
-    int swapped;            // 1 if physical memory is swapped out to the disk, otherwise 0
-    int used;               // 1 if current virtual page is occupied
-    long int offset;        // offset bytes in disk
-    physical_t *physical;   // map to a physical table entry
-    size_t size;            // allocate memory size
+    int swapped;          // 1 if physical memory is swapped out to the disk, otherwise 0
+    int used;             // 1 if current virtual page is occupied
+    long int offset;      // offset bytes in disk
+    physical_t *physical; // map to a physical table entry
+    size_t size;          // allocate memory size
 } virtual_t;
 
 static unsigned char pm_heap[PHYSICAL_SIZE];       // pre-allocated physcial memory
@@ -38,7 +37,6 @@ static physical_t pm_physical[PHYSICAL_BLOCK_NUM]; // physical memory table
 
 static int physical_available = PHYSICAL_BLOCK_NUM;
 static int virtual_available = VIRTUAL_BLOCK_NUM;
-
 
 /*
 Initialize physical memory table and virtual memory table.
@@ -94,7 +92,7 @@ Swap in function, swap in a virtual block memory from file.
 void swap_in(virtual_t *virtual_block);
 
 /*
-Check if a virtual block is swapped or not, if swapped, swap in else do nothing, return the physcial address that can be used.
+Check if a virtual block is swapped or not, if swapped, swap in else do nothing.
 */
 void pm_check(virtual_t *virtual_block);
 
@@ -111,12 +109,11 @@ void pm_write(virtual_t *virtual_block, char *string, int size);
 /*
 Read with thread safety
 */
-char* pm_read(virtual_t *virtual_block);
+char *pm_read(virtual_t *virtual_block);
 
 /*
 Return physical block number that is mapped to a virtual block
 */
 int get_page_num(virtual_t *virtual_bock);
-
 
 #endif
