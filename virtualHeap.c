@@ -7,6 +7,12 @@
 #include "virtualHeap.h"
 
 pthread_mutex_t vm_lock = PTHREAD_MUTEX_INITIALIZER;
+static unsigned char pm_heap[PHYSICAL_SIZE];       // pre-allocated physcial memory
+static virtual_t pm_virtual[VIRTUAL_BLOCK_NUM];    // virutal memory table
+static physical_t pm_physical[PHYSICAL_BLOCK_NUM]; // physical memory table
+
+static int physical_available = PHYSICAL_BLOCK_NUM;
+static int virtual_available = VIRTUAL_BLOCK_NUM;
 
 /*
 Init physical blocks point to physical address

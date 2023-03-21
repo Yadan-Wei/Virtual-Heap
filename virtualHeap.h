@@ -31,13 +31,6 @@ typedef struct virtual_t
     size_t size;          // allocate memory size
 } virtual_t;
 
-static unsigned char pm_heap[PHYSICAL_SIZE];       // pre-allocated physcial memory
-static virtual_t pm_virtual[VIRTUAL_BLOCK_NUM];    // virutal memory table
-static physical_t pm_physical[PHYSICAL_BLOCK_NUM]; // physical memory table
-
-static int physical_available = PHYSICAL_BLOCK_NUM;
-static int virtual_available = VIRTUAL_BLOCK_NUM;
-
 /*
 Initialize physical memory table and virtual memory table.
 Initially, each physical table entry points at the corresponding physical memory block;

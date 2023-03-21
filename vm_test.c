@@ -6,11 +6,11 @@
 #include <assert.h>
 
 #include "virtualHeap.h"
+#define BUFFER_SIZE 50
+#define BLOCKS_NUM 12
+#define THREADS_NUM 12
 
 // Global variables
-const int BUFFER_SIZE = 50;
-const int BLOCKS_NUM = 12;
-const int THREADS_NUM = 12;
 virtual_t *VIRT_BLOCKS[BLOCKS_NUM];
 
 // Function prototypes
