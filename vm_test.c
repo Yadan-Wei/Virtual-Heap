@@ -327,6 +327,8 @@ void *thread_write_read_routine(void *arg)
         }
         printf("\n");
     }
+
+    free(arg);
     return NULL;
 }
 
@@ -340,6 +342,7 @@ void *thread_alloc_routine(void *arg)
     if (!VIRT_BLOCKS[block])
     {
         printf("Thread %d: virt_block_%d fails to allocate. Virtual memory is full.\n", block, block);
+        free(arg);
         return NULL;
     }
     int page_num = get_page_num(VIRT_BLOCKS[block]);
@@ -360,5 +363,7 @@ void *thread_free_routine(void *arg)
         pm_free(VIRT_BLOCKS[tid]);
         assert(0 == VIRT_BLOCKS[tid]->used);
     }
+
+    free(arg);
     return NULL;
 }
